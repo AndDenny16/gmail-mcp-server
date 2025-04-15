@@ -157,11 +157,14 @@ class GmailService:
         user_email = profile.get('emailAddress', '')
         return user_email
     
-    async def send_email(self, recipient_id: str, subject: str, message: str,) -> dict:
+    async def send_email(self, recipient_id: str, subject: str, message: str, content_type: str) -> dict:
         """Creates and sends an email message"""
         try:
             message_obj = EmailMessage()
-            message_obj.set_content(message)
+            if content_type == "html":
+                message_obj.add_alternative(message, subtype="html")
+            else:
+                message_obj.set_content(message)
             
             message_obj['To'] = recipient_id
             message_obj['From'] = self.user_email
@@ -368,6 +371,10 @@ async def main(creds_file_path: str,
                             "type": "string",
                             "description": "Email content text",
                         },
+                        "content_type": {
+                            "type": "string",
+                            "description": "Can set html",
+                        },
                     },
                     "required": ["recipient_id", "subject", "message"],
                 },
@@ -455,6 +462,9 @@ async def main(creds_file_path: str,
             message = arguments.get("message")
             if not message:
                 raise ValueError("Missing message parameter")
+            content_type = arguments.get("content_type")
+            if not content_type:
+                raise ValueError("Missing message parameter")
                 
             # Extract subject and message content
             email_lines = message.split('\n')
@@ -464,7 +474,7 @@ async def main(creds_file_path: str,
             else:
                 message_content = message
                 
-            send_response = await gmail_service.send_email(recipient, subject, message_content)
+            send_response = await gmail_service.send_email(recipient, subject, message_content, content_type)
             
             if send_response["status"] == "success":
                 response_text = f"Email sent successfully. Message ID: {send_response['message_id']}"
